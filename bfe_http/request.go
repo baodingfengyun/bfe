@@ -89,21 +89,27 @@ var reqWriteExcludeHeader = map[string]bool{
 
 // A Request represents an HTTP request received by a server
 // or to be sent by a client.
+//
+//	定义一个 HTTP 请求，被服务端接收 或 被客户端发送
 type Request struct {
-	Method string // GET, POST, PUT, etc.
+	Method string // GET, POST, PUT, etc. 方法
 
 	// URL is created from the URI supplied on the Request-Line
 	// as stored in RequestURI.
 	//
 	// For most requests, fields other than Path and RawQuery
 	// will be empty. (See RFC 2616, Section 5.1.2)
+	//	请求地址
 	URL *url.URL
 
 	// The protocol version for incoming requests.
 	// Outgoing requests always use HTTP/1.1.
-	Proto      string // "HTTP/1.0"
-	ProtoMajor int    // 1
-	ProtoMinor int    // 0
+	//	协议版本(字符串)
+	Proto string // "HTTP/1.0"
+	//	大版本
+	ProtoMajor int // 1
+	//	小版本
+	ProtoMinor int // 0
 
 	// A header maps request lines to their values.
 	// If the header says
@@ -124,9 +130,15 @@ type Request struct {
 	// The request parser implements this by canonicalizing the
 	// name, making the first character and any characters
 	// following a hyphen uppercase and the rest lowercase.
+	//
+	//	请求头 键值对key 为字符串(大小写不敏感,解析为仅首字母大写的单词), value 为字符串数组(多个值)
+	//	例如: accept-encoding 被解析为: Accept-Encoding
+	//	Accept-Language 被解析为: Accept-Language
+	//	gzip, deflate 被解析为: {"gzip, deflate"}
 	Header Header
 
 	// a headerKeys represents keys of header in original order
+	//	数组类型
 	HeaderKeys textproto.MIMEKeys
 
 	// Body is the request's body.
@@ -139,6 +151,8 @@ type Request struct {
 	// but will return EOF immediately when no body is present.
 	// The Server will close the request body. The ServeHTTP
 	// Handler does not need to.
+	//	请求体. 对于客户端请求,nil 表示请求没有内容, 就像 GET 请求. 传输需要关闭.
+	//	服务端请求体一般都有值,就算没有值也会返回 EOF. 服务端会关闭请求体.
 	Body io.ReadCloser
 
 	// ContentLength records the length of the associated content.
@@ -146,6 +160,8 @@ type Request struct {
 	// Values >= 0 indicate that the given number of bytes may
 	// be read from Body.
 	// For outgoing requests, a value of 0 means unknown if Body is not nil.
+	//	内容长度 记录了内容的大小. -1 表示未知大小. 大于 0 表示了可以从请求体中读取的字节数量;
+	//	对于发送的方向, 0 表示未知大小.
 	ContentLength int64
 
 	// TransferEncoding lists the transfer encodings from outermost to
@@ -153,33 +169,40 @@ type Request struct {
 	// TransferEncoding can usually be ignored; chunked encoding is
 	// automatically added and removed as necessary when sending and
 	// receiving requests.
+	//	传输编码
 	TransferEncoding []string
 
 	// Close indicates whether to close the connection after
 	// replying to this request.
+	//	记录了是否在回复了请求之后就立即关闭连接
 	Close bool
 
 	// The host on which the URL is sought.
 	// Per RFC 2616, this is either the value of the Host: header
 	// or the host name given in the URL itself.
 	// It may be of the form "host:port".
+	//	主机地址与端口格式
 	Host string
 
 	// Form contains the parsed form data, including both the URL
 	// field's query parameters and the POST or PUT form data.
 	// This field is only available after ParseForm is called.
 	// The HTTP client ignores Form and uses Body instead.
+	//	表格,在调用 ParseForm 后有效. HTTP客户端忽略 Form,而采用 Body 替换.
 	Form url.Values
 
 	// PostForm contains the parsed form data from POST or PUT
 	// body parameters.
 	// This field is only available after ParseForm is called.
 	// The HTTP client ignores PostForm and uses Body instead.
+	//	POST 表格,在调用 ParseForm 后有效. HTTP客户端忽略 Form,而采用 Body 替换.
 	PostForm url.Values
 
 	// MultipartForm is the parsed multipart form, including file uploads.
 	// This field is only available after ParseMultipartForm is called.
 	// The HTTP client ignores MultipartForm and uses Body instead.
+	//	多部分表格,包含文件上传,在调用 ParseMultipartForm 后有效.
+	//	HTTP客户端忽略 MultipartForm,采用 Body 替换.
 	MultipartForm *multipart.Form
 
 	// Trailer maps trailer keys to values.  Like for Header, if the
@@ -188,6 +211,7 @@ type Request struct {
 	// For server requests, Trailer is only populated after Body has been
 	// closed or fully consumed.
 	// Trailer support is only partially complete.
+	//	请求尾 键值对
 	Trailer Header
 
 	// RemoteAddr allows HTTP servers and other software to record
@@ -197,12 +221,16 @@ type Request struct {
 	// sets RemoteAddr to an "IP:port" address before invoking a
 	// handler.
 	// This field is ignored by the HTTP client.
+	//	远程地址 允许 HTTP 服务器(或其它软件)记录请求发送时的网络地址,一般用来记录日志.
+	//	这个字段没有定义固定格式. 一般会设置成 IP:port 地址.
+	//	HTTP 客户端会忽略这个字段
 	RemoteAddr string
 
 	// RequestURI is the unmodified Request-URI of the
 	// Request-Line (RFC 2616, Section 5.1) as sent by the client
 	// to a server. Usually the URL field should be used instead.
 	// It is an error to set this field in an HTTP client request.
+	//	请求地址的不可改变的形式. 一般可以用 URL 字段替换. HTTP 客户端请求不可以设置此字段
 	RequestURI string
 
 	// TLS allows HTTP servers and other software to record
@@ -212,10 +240,12 @@ type Request struct {
 	// TLS-enabled connections before invoking a handler;
 	// otherwise it leaves the field nil.
 	// This field is ignored by the HTTP client.
+	//	用来记录加密连接的请求信息. 此字段不会被 ReadRequest 赋值. 同上.
 	TLS *bfe_tls.ConnectionState
 
 	// State allows HTTP server and other software to record
 	// information about the request. This filed may be not filled.
+	//	请求状态
 	State *RequestState
 }
 
@@ -348,6 +378,7 @@ func valueOrDefault(value, def string) string {
 
 // Write writes an HTTP/1.1 request -- header and body -- in wire format.
 // This method consults the following fields of the request:
+//
 //	Host
 //	URL
 //	Method (defaults to "GET")
